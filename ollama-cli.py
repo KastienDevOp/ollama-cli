@@ -7,6 +7,9 @@ import os
 import ast
 import platform
 import argparse
+from pydub import AudioSegment
+from pydub.playback import play
+import speech_recognition as sr
 
 console = Console()
 
@@ -143,10 +146,30 @@ def load_chat(chat_name):
     except Exception as e:
         console.print(f"Error loading chat: [bold red]{str(e)}[/bold red]", style="bold red")
 
+def voice_input():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        console.print("Listening... (Say 'stop voice' to end)", style="bold cyan")
+        while True:
+            audio = recognizer.listen(source)
+            try:
+                text = recognizer.recognize_google(audio)
+                if "stop voice" in text.lower():
+                    break
+                return text
+            except sr.UnknownValueError:
+                console.print("Could not understand audio", style="bold red")
+            except sr.RequestError as e:
+                console.print(f"Could not request results; {e}", style="bold red")
+
 while True:
     file = False
     websearch = False
     user_prompt = input("> ").strip()
+
+    if user_prompt == "/voice":
+        user_prompt = voice_input()
+        console.print(f"You said: [bold green]{user_prompt}[/bold green]")
 
     if user_prompt == "/?":
         console.print(Panel(
@@ -164,7 +187,6 @@ while True:
             title="Commands",
             border_style="blue"
         ))
-
 
     elif user_prompt.startswith("/save "):
         chat_name = user_prompt[6:].strip()
@@ -217,8 +239,6 @@ while True:
         else:
             console.print("Model is not installed or existing. Choose one of your installed ones:\n", style="bold red")
             print(models_string)
-
-    
 
     elif user_prompt.startswith("/file "):
         file_path = user_prompt[6:].strip()
